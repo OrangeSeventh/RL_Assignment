@@ -1434,5 +1434,5 @@ python /root/RL_Assignment/marl_algorithms/scripts/train_vmas.py \
 ---
 
 **报告日期**：2026年1月15日
-**作者**：RL_Assignment团队
+**作者**：陈俊帆
 **版本**：1.0
