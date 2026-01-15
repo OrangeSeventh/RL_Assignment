@@ -1,0 +1,37 @@
+Failure # 1 (occurred at 2026-01-14_20-23-24)
+The actor died because of an error raised in its creation task, [36mray::PPO.__init__()[39m (pid=86440, ip=172.26.29.125, actor_id=334afed92b00e9c6446cfe8a01000000, repr=PPO)
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/evaluation/worker_set.py", line 242, in _setup
+    self.add_workers(
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/evaluation/worker_set.py", line 635, in add_workers
+    raise result.get()
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/utils/actor_manager.py", line 488, in __fetch_result
+    result = ray.get(r)
+             ^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^
+ray.exceptions.RayActorError: The actor died because of an error raised in its creation task, [36mray::RolloutWorker.__init__()[39m (pid=86504, ip=172.26.29.125, actor_id=261e8da84fc4890b7e1c920301000000, repr=<ray.rllib.evaluation.rollout_worker.RolloutWorker object at 0x743189923d50>)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/evaluation/rollout_worker.py", line 682, in __init__
+    self.policy_dict, self.is_policy_to_train = self.config.get_multi_agent_setup(
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/algorithms/algorithm_config.py", line 2807, in get_multi_agent_setup
+    raise ValueError(
+ValueError: `observation_space` not provided in PolicySpec for default_policy and env does not have an observation space OR no spaces received from other workers' env(s) OR no `observation_space` specified in config!
+
+During handling of the above exception, another exception occurred:
+
+[36mray::PPO.__init__()[39m (pid=86440, ip=172.26.29.125, actor_id=334afed92b00e9c6446cfe8a01000000, repr=PPO)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/algorithms/algorithm.py", line 475, in __init__
+    super().__init__(
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/tune/trainable/trainable.py", line 170, in __init__
+    self.setup(copy.deepcopy(self.config))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/algorithms/algorithm.py", line 601, in setup
+    self.workers = WorkerSet(
+                   ^^^^^^^^^^
+  File "/root/RL_Assignment/venv/lib/python3.11/site-packages/ray/rllib/evaluation/worker_set.py", line 194, in __init__
+    raise e.args[0].args[2]
+ValueError: `observation_space` not provided in PolicySpec for default_policy and env does not have an observation space OR no spaces received from other workers' env(s) OR no `observation_space` specified in config!
