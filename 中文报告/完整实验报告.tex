@@ -12,6 +12,22 @@
 \usepackage{caption}
 \usepackage{subcaption}
 
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    showstringspaces=false,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{green!50!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    xleftmargin=2em,
+    escapeinside=``,
+    extendedchars=true,
+    inputencoding=utf8,
+}
+
 \geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
 
 \hypersetup{
@@ -31,14 +47,13 @@
 
 \maketitle
 
+\textbf{项目代码仓库}: \url{https://github.com/OrangeSeventh/RL_Assignment}
+
+\vspace{1cm}
+
+\maketitle
+
 \tableofcontents
-\newpage
-
-\section{项目代码}
-
-完整的项目代码和实现细节可在GitHub上查看：\\
-\url{https://github.com/OrangeSeventh/RL_Assignment}
-
 \newpage
 
 \section{报告摘要}
@@ -507,7 +522,7 @@ VMAS基于物理引擎，观测包含不同尺度的物理量：
 
 \begin{lstlisting}[language=Python, caption=观测归一化实现]
 class RunningMeanStd:
-    """运行均值和方差计算器"""
+    """Running mean and variance calculator"""
     def __init__(self, shape, epsilon=1e-8):
         self.mean = torch.zeros(shape)
         self.var = torch.ones(shape)
@@ -530,7 +545,7 @@ class RunningMeanStd:
 
 
 class NormalizeObservation:
-    """观测归一化Wrapper"""
+    """Observation normalization wrapper"""
     def __init__(self, obs_dim, clip_range=10.0, pre_collect_steps=20):
         self.obs_dim = obs_dim
         self.clip_range = clip_range
