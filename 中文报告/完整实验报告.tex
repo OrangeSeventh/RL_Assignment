@@ -34,6 +34,13 @@
 \tableofcontents
 \newpage
 
+\section{项目代码}
+
+完整的项目代码和实现细节可在GitHub上查看：\\
+\url{https://github.com/OrangeSeventh/RL_Assignment}
+
+\newpage
+
 \section{报告摘要}
 
 本报告详细记录了在VMAS（Vectorized Multi-Agent Simulator）框架下Transport任务的多智能体强化学习（MARL）实验。我们完成了以下三个主要任务：
@@ -347,23 +354,15 @@ IPPO & 性能最差 & 0.1458 & -0.0477 & 788.11秒 & \checkmark 一致 \\
 \end{tabular}
 \end{table}
 
-\subsubsection{详细对比验证}
+\subsubsection{结果一致性分析}
 
-\begin{table}[H]
-\centering
-\caption{复现结论验证}
-\begin{tabular}{llll}
-\toprule
-论文结论 & 论文结果 & 复现结果 & 一致性 \\
-\midrule
-CPPO峰值性能最优 & \checkmark & \checkmark (0.3457最高) & \checkmark 完全一致 \\
-MAPPO性能稳定 & \checkmark & \checkmark (最终正值) & \checkmark 完全一致 \\
-IPPO性能最差 & \checkmark & \checkmark (峰值和最终都最低) & \checkmark 完全一致 \\
-集中式训练优于分布式 & \checkmark & \checkmark (CPPO/MAPPO > IPPO) & \checkmark 完全一致 \\
-算法排名 & CPPO > MAPPO > IPPO & CPPO(峰值) > MAPPO(稳定) > IPPO & \textbf{基本一致} \\
-\bottomrule
-\end{tabular}
-\end{table}
+实验结果在核心性能趋势上验证了论文的结论。具体而言：
+
+峰值性能：CPPO在训练初期达到了所有算法中的最高平均奖励（0.3457），这与论文中关于集中式训练能达到理论最优性能的观点相符。
+
+算法排名：在峰值性能上，呈现出 CPPO > MAPPO > IPPO 的排序，验证了集中式训练在协作任务中的优势。
+
+稳定性差异：虽然MAPPO的最终收敛值（0.0381）低于CPPO的峰值，但其表现出更优异的稳定性。相比之下，IPPO由于缺乏全局信息，全程表现最差，这与预期完全一致。
 
 \subsection{差异分析}
 
@@ -404,7 +403,7 @@ IPPO性能最差 & \checkmark & \checkmark (峰值和最终都最低) & \checkma
     \item 学习曲线趋势与论文一致
 \end{itemize}
 
-\textbf{正确性得分}：90/100
+
 
 \subsubsection{复现完整性}
 

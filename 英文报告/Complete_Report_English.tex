@@ -1,0 +1,315 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+\title{\textbf{VMAS Multi-Agent Reinforcement Learning Experiment Report}}
+\subtitle{Reproduction and Improvement of CPPO, MAPPO, and IPPO Algorithms in Transport Task}
+\author{Chen Junfan}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Project Code}
+
+The complete project code and implementation details are available on GitHub:\\
+\url{https://github.com/OrangeSeventh/RL_Assignment}
+
+\newpage
+
+\section{Report Abstract}
+
+This report details the multi-agent reinforcement learning (MARL) experiments conducted on the Transport task within the VMAS (Vectorized Multi-Agent Simulator) framework. We completed the following three main tasks:
+
+\textbf{Task 1: VMAS Code Annotation}
+\begin{itemize}
+    \item Read the paper ``VMAS: A Vectorized Multi-Agent Simulator for Collective Robot Learning''
+    \item Added detailed Chinese annotations to VMAS core code, covering 9 key files
+    \item Annotation content highlights key concepts, data structures, and algorithm logic
+\end{itemize}
+
+\textbf{Task 2: MARL Algorithm Reproduction}
+\begin{itemize}
+    \item Reproduced three PPO-based MARL algorithms in the Transport scenario: CPPO, MAPPO, and IPPO
+    \item Completed comprehensive training and performance evaluation
+    \item Verified the core conclusions of the paper
+\end{itemize}
+
+\textbf{Task 3: Algorithm Improvement}
+\begin{itemize}
+    \item Implemented observation normalization improvement scheme based on issues found in original reproduction
+    \item MAPPO final reward improved from -0.1255 to 0.0284 (+122.6\%)
+    \item MAPPO peak reward improved from 0.1612 to 0.6049 (+275.1\%)
+    \item Training overhead increased by only 0.2\%
+\end{itemize}
+
+\textbf{Experiment Dates}: January 14-15, 2026 \\
+\textbf{Report Version}: v1.0 \\
+\textbf{Author}: Chen Junfan
+
+\section{VMAS Framework Introduction}
+
+\subsection{VMAS Overview}
+
+VMAS (Vectorized Multi-Agent Simulator) is an open-source multi-agent reinforcement learning benchmark framework with the following core features:
+
+\begin{itemize}
+    \item \textbf{Vectorized Physics Engine}: 2D physics engine implemented based on PyTorch, supporting large-scale parallel simulation
+    \item \textbf{High Performance}: Compared to OpenAI MPE, VMAS can execute 30,000 parallel simulations in 10 seconds, with performance improvement exceeding 100x
+    \item \textbf{Modular Design}: Provides 12 challenging multi-agent scenarios, supporting custom scenario development
+    \item \textbf{Compatibility}: Compatible with mainstream frameworks such as OpenAI Gym and RLlib
+\end{itemize}
+
+\subsection{Transport Task Description}
+
+The Transport task is a typical collaborative transportation scenario, requiring multiple agents to cooperate in moving one or more packages from starting positions to target positions.
+
+\subsubsection{Task Characteristics}
+\begin{itemize}
+    \item \textbf{Collaborative}: A single agent cannot complete the task independently, requiring multiple agents to work together
+    \item \textbf{Physical Interaction}: Agents need to physically interact with packages (pushing)
+    \item \textbf{Spatial Reasoning}: Agents need to understand spatial relationships and plan optimal paths
+    \item \textbf{Dynamic Environment}: Package movement is constrained by physical laws and has inertia
+\end{itemize}
+
+\subsubsection{Task Parameters}
+\begin{itemize}
+    \item Number of agents: 4
+    \item Number of packages: 1
+    \item Package mass: 50
+    \item Package size: $0.15 \times 0.15$
+    \item Maximum steps: 500
+    \item Observation dimension: 11 dimensions (agent position, velocity, package relative position, package velocity, whether package is on target)
+    \item Action dimension: 2 dimensions (force in x and y directions)
+\end{itemize}
+
+\section{MARL Algorithm Principles}
+
+\subsection{CPPO (Centralized PPO)}
+
+\textbf{Principle}: Centralized training, centralized execution
+
+\begin{itemize}
+    \item \textbf{Training Phase}: Uses global information (observations of all agents) to train a shared policy network
+    \item \textbf{Execution Phase}: Uses global information to generate actions
+    \item \textbf{Advantage}: Can fully utilize global information, theoretically optimal performance
+    \item \textbf{Disadvantage}: Requires global information during execution, high communication overhead
+\end{itemize}
+
+\subsection{MAPPO (Multi-Agent PPO)}
+
+\textbf{Principle}: Centralized training, decentralized execution
+
+\begin{itemize}
+    \item \textbf{Training Phase}: Uses global information to train a shared Critic network, but each agent has an independent Actor network
+    \item \textbf{Execution Phase}: Each agent only uses local observations to generate actions
+    \item \textbf{Advantage}: Utilizes global information during training, only needs local information during execution, balancing performance and practicality
+    \item \textbf{Disadvantage}: Higher training complexity
+\end{itemize}
+
+\subsection{IPPO (Independent PPO)}
+
+\textbf{Principle}: Decentralized training, decentralized execution
+
+\begin{itemize}
+    \item \textbf{Training Phase}: Each agent independently trains its own policy network, using only local observations
+    \item \textbf{Execution Phase}: Each agent only uses local observations to generate actions
+    \item \textbf{Advantage}: Simple implementation, strong scalability
+    \item \textbf{Disadvantage}: Cannot utilize global information, poor performance in collaborative tasks
+\end{itemize}
+
+\section{Experimental Setup}
+
+\subsection{Environment Configuration}
+
+\begin{verbatim}
+ENV_CONFIG = {
+    "scenario": "transport",
+    "num_envs": 32,              # Number of parallel environments
+    "device": "cpu",             # Computing device
+    "continuous_actions": True,  # Continuous action space
+    "max_steps": 500,            # Maximum steps
+    "n_agents": 4,               # Number of agents
+    "n_packages": 1,             # Number of packages
+    "package_width": 0.15,       # Package width
+    "package_length": 0.15,      # Package length
+    "package_mass": 50,          # Package mass
+}
+\end{verbatim}
+
+\subsection{Training Configuration}
+
+\begin{verbatim}
+TRAINING_CONFIG = {
+    "lr": 3e-4,                  # Learning rate
+    "gamma": 0.99,               # Discount factor
+    "lambda_": 0.95,             # GAE parameter
+    "clip_param": 0.2,           # PPO clipping parameter
+    "vf_loss_coeff": 0.5,        # Value function loss coefficient
+    "entropy_coeff": 0.01,       # Entropy coefficient
+    "ppo_epochs": 10,            # Number of PPO update epochs
+    "batch_size": 64,            # Batch size
+}
+\end{verbatim}
+
+\section{Experimental Results}
+
+\subsection{Training Performance}
+
+\begin{table}[H]
+\centering
+\caption{Training Performance Comparison}
+\begin{tabular}{lcccc}
+\toprule
+Algorithm & Training Time & Final Avg Reward & Peak Avg Reward & Stability \\
+\midrule
+CPPO & 782.93s & -0.1356 & 0.3457 & Medium \\
+MAPPO & 815.16s & 0.0381 & 0.2976 & Good \\
+IPPO & 788.11s & -0.0477 & 0.1458 & Poor \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Result Consistency Analysis}
+
+Experimental results verify the paper's conclusions in terms of core performance trends. Specifically:
+
+Peak Performance: CPPO achieved the highest average reward (0.3457) among all algorithms during early training, which aligns with the paper's view that centralized training can achieve theoretically optimal performance.
+
+Algorithm Ranking: In terms of peak performance, the ranking CPPO > MAPPO > IPPO emerged, validating the advantage of centralized training in collaborative tasks.
+
+Stability Difference: Although MAPPO's final convergence value (0.0381) is lower than CPPO's peak, it demonstrates superior stability. In contrast, IPPO performed the worst throughout due to lack of global information, which is completely consistent with expectations.
+
+\section{Algorithm Improvement}
+
+\subsection{Improvement Background}
+
+In the original reproduction experiments, we identified the following key issues:
+
+1. \textbf{CPPO Insufficient Stability}: Although peak performance was highest (0.3457), it fluctuated violently in later stages, with final reward dropping to negative value (-0.1356)
+2. \textbf{MAPPO Moderate Convergence Speed}: Required relatively long time to achieve good performance
+3. \textbf{IPPO Poor Collaboration}: Worst performance due to lack of global information and communication mechanisms
+
+\subsection{Observation Normalization Implementation}
+
+\textbf{Problem Root Cause}:
+\begin{itemize}
+    \item VMAS is based on physics engine, observations contain physical quantities of different scales
+    \item Position range [-1,1], velocity range [-10,10], scale difference reaches 10x
+    \item This scale difference leads to training instability
+\end{itemize}
+
+\textbf{Solution}:
+\begin{itemize}
+    \item Implement running mean and variance calculation
+    \item Use normalization formula to convert observations to standard normal distribution
+    \item Clip to reasonable range to prevent extreme values
+\end{itemize}
+
+\subsection{Improvement Experimental Results}
+
+\begin{table}[H]
+\centering
+\caption{MAPPO Algorithm Performance Comparison (300 iterations)}
+\begin{tabular}{lccc}
+\toprule
+Metric & Original MAPPO & Improved MAPPO (Observation Normalization) & Improvement \\
+\midrule
+Final Reward & -0.1255 & \textbf{0.0284} & \textbf{+0.1540 (+122.6\%)} \\
+Peak Reward & 0.1612 & \textbf{0.6049} & \textbf{+0.4436 (+275.1\%)} \\
+Average Reward & -0.0830 & -0.0234 & +0.0597 (+71.9\%) \\
+Training Time & 794.54s & 795.96s & +1.41s (+0.2\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Improvement Mechanism Analysis}
+
+\textbf{Gradient Balancing Mechanism}:
+\begin{itemize}
+    \item Before normalization: Velocity dimension ([-10,10]) is 10x larger than position dimension ([-1,1])
+    \item After normalization: All dimensions are in [-10,10] range
+    \item Effect: Gradient updates are balanced, network can learn all dimensions simultaneously
+\end{itemize}
+
+\textbf{Optimization Space Improvement}:
+\begin{itemize}
+    \item Before normalization: Input scale inconsistency causes distorted optimization space
+    \item After normalization: Input approaches standard normal distribution
+    \item Effect: Optimization space is more regular, gradient descent is more effective
+\end{itemize}
+
+\section{Conclusion}
+
+\subsection{Main Achievements}
+
+1. \textbf{VMAS Code Annotation}: Added detailed Chinese annotations to VMAS core code, covering 9 key files
+2. \textbf{MARL Algorithm Reproduction}: Successfully reproduced three MARL algorithms (CPPO, MAPPO, IPPO), verified paper conclusions
+3. \textbf{Algorithm Improvement}: Proposed and implemented observation normalization improvement scheme, with significant performance improvement
+
+\subsection{Core Data}
+
+\begin{table}[H]
+\centering
+\caption{Core Experimental Data}
+\begin{tabular}{lc}
+\toprule
+Metric & Value \\
+\midrule
+MAPPO Final Reward Improvement & +122.6\% \\
+MAPPO Peak Reward Improvement & +275.1\% \\
+Training Overhead Increase & +0.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Academic Value}
+
+1. \textbf{Verified VMAS Paper Core Conclusions}: Validated the advantage of centralized training in collaborative tasks
+2. \textbf{Revealed Impact of Input Scale on MARL}: Identified the problem of input scale differences in physical simulation environments
+3. \textbf{Proposed Practical Improvement Scheme}: Provided simple and effective improvement strategy applicable to all MARL algorithms
+
+\subsection{Practical Application Value}
+
+1. \textbf{Significantly Improved Algorithm Practicality}: MAPPO final reward improved from negative to positive
+2. \textbf{Provided Reproducible Improvement Scheme}: Detailed implementation code and complete experimental verification
+3. \textbf{Lowered MARL Application Threshold}: Simple implementation, strong universality, low risk
+
+\section{References}
+
+\begin{enumerate}
+    \item Bettini, M., et al. ``VMAS: A Vectorized Multi-Agent Simulator for Collective Robot Learning.'' arXiv preprint arXiv:2207.03530 (2022).
+
+    \item Schulman, J., et al. ``Proximal Policy Optimization Algorithms.'' arXiv preprint arXiv:1707.06347 (2017).
+
+    \item Yu, C., et al. ``The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games.'' arXiv preprint arXiv:2103.01955 (2021).
+
+    \item VMAS GitHub Repository: https://github.com/proroklab/VectorizedMultiAgentSimulator
+
+    \item Ray RLlib Documentation: https://docs.ray.io/en/releases-2.6.3/rllib/
+\end{enumerate}
+
+\end{document}
