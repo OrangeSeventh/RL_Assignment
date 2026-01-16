@@ -30,6 +30,10 @@ from transport_config import (
     PATH_CONFIG,
 )
 
+# 导入观测归一化
+sys.path.insert(0, '/root/RL_Assignment/marl_algorithms')
+from normalization import NormalizeObservation
+
 # ==================== 神经网络定义 ====================
 
 class ActorCritic(nn.Module):
@@ -197,7 +201,7 @@ class PPO:
 
 # ==================== 训练函数 ====================
 
-def collect_trajectories(env, policies, num_steps, num_envs):
+def collect_trajectories(env, policies, num_steps, num_envs, obs_normalizer=None, update_stats=True):
     """收集轨迹数据（向量化）"""
     obs = env.reset()
 
@@ -224,6 +228,10 @@ def collect_trajectories(env, policies, num_steps, num_envs):
             policy = policies[agent.name]
             obs_tensor = obs[i] if isinstance(obs[i], torch.Tensor) else torch.tensor(obs[i], dtype=torch.float32)
 
+            # 观测归一化
+            if obs_normalizer is not None:
+                obs_tensor = obs_normalizer.normalize(obs_tensor, update_stats=update_stats)
+
             action, log_prob, value = policy.actor_critic.get_action(obs_tensor)
 
             actions.append(action)
@@ -247,10 +255,12 @@ def collect_trajectories(env, policies, num_steps, num_envs):
     return trajectories
 
 
-def train_algorithm(algorithm_name, num_iterations=300, num_steps_per_iter=200, num_envs=32):
+def train_algorithm(algorithm_name, num_iterations=300, num_steps_per_iter=200, num_envs=32, use_normalization=False):
     """训练指定算法"""
     print(f"\n{'='*60}")
     print(f"开始训练 {algorithm_name} 算法")
+    if use_normalization:
+        print(f"使用观测归一化")
     print(f"{'='*60}\n")
 
     # 创建VMAS环境
@@ -268,6 +278,15 @@ def train_algorithm(algorithm_name, num_iterations=300, num_steps_per_iter=200, 
         package_length=ENV_CONFIG["package_length"],
         package_mass=ENV_CONFIG["package_mass"],
     )
+
+    # 创建观测归一化器
+    obs_normalizer = None
+    if use_normalization:
+        obs_dim = env.observation_space[0].shape[0]
+        # 预收集20步数据来初始化归一化统计量
+        obs_normalizer = NormalizeObservation(obs_dim, pre_collect_steps=20)
+        print(f"已创建观测归一化器，观测维度: {obs_dim}")
+        print(f"将预收集20步数据来初始化归一化统计量...")
 
     print(f"环境信息:")
     print(f"  - 智能体数量: {len(env.agents)}")
@@ -336,11 +355,32 @@ def train_algorithm(algorithm_name, num_iterations=300, num_steps_per_iter=200, 
     all_metrics = []
     start_time = time.time()
 
+    # 如果使用归一化，先预收集数据
+    if use_normalization and not obs_normalizer.is_pre_collection_done():
+        print(f"\n>>> 预收集数据初始化归一化统计量...")
+        obs = env.reset()
+        for step in range(obs_normalizer.pre_collect_steps):
+            # 使用随机动作收集数据（裁剪到[-1, 1]范围）
+            actions = []
+            for agent in env.agents:
+                action = torch.randn(num_envs, env.action_space[0].shape[0], device=env.device)
+                action = torch.clamp(action, -1.0, 1.0)  # 裁剪到有效范围
+                actions.append(action)
+
+            obs, rews, dones, info = env.step(actions)
+
+            # 收集所有智能体的观测
+            for i, agent in enumerate(env.agents):
+                obs_tensor = obs[i] if isinstance(obs[i], torch.Tensor) else torch.tensor(obs[i], dtype=torch.float32)
+                obs_normalizer.pre_collect(obs_tensor)
+
+        obs_normalizer.finalize_pre_collection()
+
     for iteration in range(num_iterations):
         iteration_start = time.time()
 
         # 收集轨迹
-        trajectories = collect_trajectories(env, policies, num_steps_per_iter, num_envs)
+        trajectories = collect_trajectories(env, policies, num_steps_per_iter, num_envs, obs_normalizer, update_stats=True)
 
         # 更新策略
         metrics = {}
@@ -499,6 +539,11 @@ def main():
         default=32,
         help="并行环境数量"
     )
+    parser.add_argument(
+        "--normalization",
+        action="store_true",
+        help="是否使用观测归一化"
+    )
 
     args = parser.parse_args()
 
@@ -507,9 +552,10 @@ def main():
     print(f"  - 迭代次数: {args.iterations}")
     print(f"  - 每次迭代步数: {args.steps}")
     print(f"  - 并行环境数: {args.envs}")
+    print(f"  - 观测归一化: {args.normalization}")
     print(f"  - 预计训练时间: ~{args.iterations * args.steps / 377:.1f}秒")
 
-    results = train_algorithm(args.algorithm, args.iterations, args.steps, args.envs)
+    results = train_algorithm(args.algorithm, args.iterations, args.steps, args.envs, args.normalization)
 
     print(f"\n{'='*60}")
     print(f"训练完成!")
